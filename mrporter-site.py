@@ -9,7 +9,41 @@ from bs4 import BeautifulSoup
 import time
 import random
 from log import *
+from discord_hooks import Webhook
 
+def send_embed(alert_type):
+    '''
+    (str, str, list, str, str, str) -> None
+    Sends a discord alert based on info provided.
+    '''
+    # Set webhook
+    url = 'https://discordapp.com/api/webhooks/481411222118465550/8TanFM9unt2Ztf_ySUGlus9MNw9DVDaTKNXAQZpMYvtnoucHevzCYn0gjwV_ZpQmKsTQ'
+
+    # Create embed to send to webhook
+    embed = Webhook(url, color=123123)
+
+    # Set author info
+    embed.set_author(name='NERYS', icon='https://static.zerochan.net/Daenerys.Targaryen.full.2190849.jpg')
+
+    # Set product details
+    if(alert_type == "RESTOCK"):
+        embed.set_desc("RESTOCK: " + "title")
+    elif(alert_type == "NEW"):
+        embed.set_desc("NEW: " + "title")
+
+    embed.add_field(name="Product", value="유현딱지사랑해")
+    embed.add_field(name="Link", value="link")
+    embed.add_field(name="Stock", value="stock")
+
+    # Set product image
+    embed.set_thumbnail('https://static.zerochan.net/Daenerys.Targaryen.full.2190849.jpg')
+    embed.set_image('https://static.zerochan.net/Daenerys.Targaryen.full.2190849.jpg')
+
+    # Set footer
+    embed.set_footer(text='NERYS by @snivynGOD', icon='https://static.zerochan.net/Daenerys.Targaryen.full.2190849.jpg', ts=True)
+
+    # Send Discord alert
+    embed.post()
 class Product:
     def __init__(self, brand, name, price, link, siteLik):
         self.link = link
@@ -145,6 +179,101 @@ def build_db():
             #print(DEBUG_PRINT.format(brand, name, price, imgLink, SITE + siteLink))
             products_list[siteLink] = Product(brand,name,price,imgLink,SITE + siteLink)
     #
+
+def monitor():
+    # GET "view all" page
+    BRAND_CLASS_NAME = 'pl-products-item__text pl-products-item__text--brand pl-products-item__text--upper'
+    NAME_CLASS_NAME = 'pl-products-item__text pl-products-item__text--name'
+    PRICE_CLASS_NAME = 'pl-products-item__text pl-products-item__text--price'
+    IMG_CLASS_NAME = 'pl-products-item__img pl-products-item__spacing'
+    # seperate page url formatting var
+    URL_FORMAT = 'https://www.mrporter.com/en-jp/mens/shoes?pn={}'
+
+    # =========
+
+    # GET "view all" page
+    link = URL_FORMAT.format(1)
+    headers = {
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36"
+    }
+    proxies = get_proxy(proxy_list)
+
+    try:
+        r = requests.get(link, timeout=5, verify=False)
+    except:
+        log('e', "Connection to URL <" + link + "> failed. Retrying...")
+        try:
+            if(use_proxies):
+                proxies = get_proxy(proxy_list)
+                r = requests.get(link, proxies=proxies, timeout=8, verify=False)
+            else:
+                r = requests.get(link, timeout=8, verify=False)
+        except:
+            log('e', "Connection to URL <" + link + "> failed.")
+            return
+
+    bs4 = BeautifulSoup(r.text, "html.parser")
+    lis = bs4.find_all('li', class_="pl-products-item")
+    for li in lis:
+        brand = li.find('span', class_=BRAND_CLASS_NAME).get_text().strip()
+        name = li.find('span', class_=NAME_CLASS_NAME).get_text().strip()
+        price = li.find('span', class_=PRICE_CLASS_NAME).get_text().strip()
+        imgLink = li.find('div', class_=IMG_CLASS_NAME).img['src']
+        siteLink = li.a['href']
+        # print(DEBUG_PRINT.format(brand, name, price, imgLink, SITE + siteLink))
+        products_list[siteLink] = Product(brand, name, price, imgLink, SITE + siteLink)
+
+
+    log('i', "Checking mrporter products...")
+    #for product in products:
+#        link = "https://www.supremenewyork.com" + product.a["href"]
+#        monitor_supreme_product(link, product)
+
+
+def monitor_supreme_product(link, product):
+    # Product info
+    image = "https:" + product.a.img["src"]
+    if (product.text == "sold out"):
+        stock = False
+    else:
+        stock = True
+
+    # Product already in database
+    try:
+        if (stock is True and products_list[link].stock is False):
+            log('s', products_list[link].title + " is back in stock!")
+            products_list[link].stock = True
+            send_embed("RESTOCK", products_list[link])
+        elif (stock is False and products_list[link].stock is True):
+            log('s', products_list[link].title + " is now out of stock.")
+            products_list[link].stock = False
+    # Add new product to database
+    except:
+        # GET product name
+        try:
+            if (use_proxies):
+                proxies = get_proxy(proxy_list)
+                r = requests.get(link, proxies=proxies, timeout=8, verify=False)
+            else:
+                r = requests.get(link, timeout=8, verify=False)
+        except:
+            log('e', "Connection to URL <" + link + "> failed. Retrying...")
+            try:
+                if (use_proxies):
+                    proxies = get_proxy(proxy_list)
+                    r = requests.get(link, proxies=proxies, timeout=8, verify=False)
+                else:
+                    r = requests.get(link, timeout=8, verify=False)
+            except:
+                log('e', "Connection to URL <" + link + "> failed.")
+                return
+
+        title = soup(r.text, "html.parser").find("title").text
+
+        # Add product to database
+        products_list[link] = Product(link, image, title, stock)
+        log('s', "Added " + title + " to the database.")
+        send_embed("NEW", products_list[link])
 
 
 ''' --------------------------------- RUN --------------------------------- '''
