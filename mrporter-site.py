@@ -256,7 +256,6 @@ if __name__ == "__main__":
     # Build database
     build_db()
 
-    idx = 1
     # Monitor products
     while (True):
         monitor()
