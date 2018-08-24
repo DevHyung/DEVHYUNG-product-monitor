@@ -11,13 +11,13 @@ import random
 from log import *
 from discord_hooks import Webhook
 
-def send_embed(alert_type):
+def send_embed(alert_type,product):
     '''
     (str, str, list, str, str, str) -> None
     Sends a discord alert based on info provided.
     '''
     # Set webhook
-    url = 'https://discordapp.com/api/webhooks/481411222118465550/8TanFM9unt2Ztf_ySUGlus9MNw9DVDaTKNXAQZpMYvtnoucHevzCYn0gjwV_ZpQmKsTQ'
+    url = discord_webhook
 
     # Create embed to send to webhook
     embed = Webhook(url, color=123123)
@@ -182,6 +182,7 @@ def build_db():
 
 def monitor():
     # GET "view all" page
+    SITE = 'https://www.mrporter.com/'
     BRAND_CLASS_NAME = 'pl-products-item__text pl-products-item__text--brand pl-products-item__text--upper'
     NAME_CLASS_NAME = 'pl-products-item__text pl-products-item__text--name'
     PRICE_CLASS_NAME = 'pl-products-item__text pl-products-item__text--price'
@@ -212,6 +213,7 @@ def monitor():
             log('e', "Connection to URL <" + link + "> failed.")
             return
 
+    log('i', "Checking mrporter products...")
     bs4 = BeautifulSoup(r.text, "html.parser")
     lis = bs4.find_all('li', class_="pl-products-item")
     for li in lis:
@@ -221,59 +223,13 @@ def monitor():
         imgLink = li.find('div', class_=IMG_CLASS_NAME).img['src']
         siteLink = li.a['href']
         # print(DEBUG_PRINT.format(brand, name, price, imgLink, SITE + siteLink))
-        products_list[siteLink] = Product(brand, name, price, imgLink, SITE + siteLink)
-
-
-    log('i', "Checking mrporter products...")
-    #for product in products:
-#        link = "https://www.supremenewyork.com" + product.a["href"]
-#        monitor_supreme_product(link, product)
-
-
-def monitor_supreme_product(link, product):
-    # Product info
-    image = "https:" + product.a.img["src"]
-    if (product.text == "sold out"):
-        stock = False
-    else:
-        stock = True
-
-    # Product already in database
-    try:
-        if (stock is True and products_list[link].stock is False):
-            log('s', products_list[link].title + " is back in stock!")
-            products_list[link].stock = True
-            send_embed("RESTOCK", products_list[link])
-        elif (stock is False and products_list[link].stock is True):
-            log('s', products_list[link].title + " is now out of stock.")
-            products_list[link].stock = False
-    # Add new product to database
-    except:
-        # GET product name
         try:
-            if (use_proxies):
-                proxies = get_proxy(proxy_list)
-                r = requests.get(link, proxies=proxies, timeout=8, verify=False)
-            else:
-                r = requests.get(link, timeout=8, verify=False)
+            products_list[siteLink]
         except:
-            log('e', "Connection to URL <" + link + "> failed. Retrying...")
-            try:
-                if (use_proxies):
-                    proxies = get_proxy(proxy_list)
-                    r = requests.get(link, proxies=proxies, timeout=8, verify=False)
-                else:
-                    r = requests.get(link, timeout=8, verify=False)
-            except:
-                log('e', "Connection to URL <" + link + "> failed.")
-                return
+            log('s', "Added " + name + " to the database.")
+            products_list[siteLink] = Product(brand, name, price, imgLink, SITE + siteLink)
+            send_embed('NEW',products_list[siteLink])
 
-        title = soup(r.text, "html.parser").find("title").text
-
-        # Add product to database
-        products_list[link] = Product(link, image, title, stock)
-        log('s', "Added " + title + " to the database.")
-        send_embed("NEW", products_list[link])
 
 
 ''' --------------------------------- RUN --------------------------------- '''
@@ -297,10 +253,13 @@ if __name__ == "__main__":
     # Build database
     build_db()
 
-    print(products_list)
-
+    idx = 1
     # Monitor products
     while (True):
         monitor()
         time.sleep(MONITOR_DELAY)
+        idx +=1
+        if idx == 3:
+            products_list.pop('/en-jp/mens/gucci/striped-rubber-slides/1054353')
+
 
