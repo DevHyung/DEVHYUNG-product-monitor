@@ -1,8 +1,7 @@
 #-*-encoding:utf8:-*-
 ''' --------------------------------- INPUT YOUR CONFIG --------------------------------- '''
-MONITOR_DELAY = 5 # second, if your input 10, monitor interval 10 second
-discord_webhook = 'https://discordapp.com/api/webhooks/481411222118465550/8TanFM9unt2Ztf_ySUGlus9MNw9DVDaTKNXAQZpMYvtnoucHevzCYn0gjwV_ZpQmKsTQ'
-
+MONITOR_DELAY = int(input(">>> Monitor Delay를 입력해주세요 (정수만) : ")) # second, if your input 10, monitor interval 10 second
+discord_webhook = input(">>> 웹훅 URL을 입력해주세요 : ")
 ''' ------------------------------------------------------------------------------------- '''
 import requests
 from bs4 import BeautifulSoup
@@ -260,5 +259,6 @@ if __name__ == "__main__":
     while (True):
         monitor()
         time.sleep(MONITOR_DELAY)
+
 
 
