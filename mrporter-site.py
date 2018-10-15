@@ -2,6 +2,8 @@
 ''' --------------------------------- INPUT YOUR CONFIG --------------------------------- '''
 MONITOR_DELAY = int(input(">>> Monitor Delay를 입력해주세요 (정수만) : ")) # second, if your input 10, monitor interval 10 second
 discord_webhook = input(">>> 웹훅 URL을 입력해주세요 : ")
+#MONITOR_DELAY = 5
+#discord_webhook = 'https://discordapp.com/api/webhooks/481411222118465550/8TanFM9unt2Ztf_ySUGlus9MNw9DVDaTKNXAQZpMYvtnoucHevzCYn0gjwV_ZpQmKsTQ'
 ''' ------------------------------------------------------------------------------------- '''
 import requests
 from bs4 import BeautifulSoup
@@ -101,7 +103,7 @@ def get_proxy(proxy_list):
 
 def get_now_time():
     """
-    :return: now time stamp
+    :return: 현재 시간 time stamp를 반환
     """
     now = time.localtime()
     return "%04d-%02d-%02d %02d:%02d:%02d" % (now.tm_year, now.tm_mon, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec)
@@ -113,18 +115,19 @@ def get_bs_by_url(_url):
     return BeautifulSoup(requests.get(_url,timeout=5).text,'lxml')
 
 def build_db():
-    # ===CONFIG
-    # using variable webhook or crawling css, class, id attribute
+    # === 환경 설정 부분
+    # 크롤링 해서 가져올 타켓팅 요소들의 CLASS NAME 이나, css, id 등의
+    # attribute등을 정함
     SITE = 'https://www.mrporter.com/'
     BRAND_CLASS_NAME = 'pl-products-item__text pl-products-item__text--brand pl-products-item__text--upper'
     NAME_CLASS_NAME = 'pl-products-item__text pl-products-item__text--name'
     PRICE_CLASS_NAME = 'pl-products-item__text pl-products-item__text--price'
     IMG_CLASS_NAME = 'pl-products-item__img pl-products-item__spacing'
-    # seperate page url formatting var
+
+    # 페이지 넘버 기준으로 파싱을 하기위해서 pn = 뒤의 {}칸을 비운 포맷팅 변수
     URL_FORMAT = 'https://www.mrporter.com/en-jp/mens/shoes?pn={}'
     # =========
 
-    # GET "view all" page
     link = URL_FORMAT.format(1)
     headers = {
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36"
@@ -147,12 +150,13 @@ def build_db():
 
     bs4 = BeautifulSoup(r.text, "lxml")
 
-    #bs4 = get_bs_by_url(URL_FORMAT.format(1))
-    # get page total cnt
+
+    # Page의 Total 수부분을 가져옴
     pageTotal = int(bs4.find('li', class_='pl-pagination__item pl-pagination__item--number').find_all('span')[
                         -1].get_text().strip())
     log('i',"Total {} Page exist".format(pageTotal))
 
+    # 페이지의 마지막 까지 돌면서 DB를 구축한다.
     for pageNum in range(1, pageTotal + 1):
         log('i','{} page parsing...'.format(pageNum))
         # GET "view all" page
@@ -173,24 +177,26 @@ def build_db():
         bs4 = BeautifulSoup(r.text, "lxml")
         lis = bs4.find_all('li', class_="pl-products-item")
         for li in lis:
+            # 크롤링 부분 예를들면 brand는 span태그중 class이름이 위에 명시된 class_name
+            # 인부분에 있다는 소리 이부분을 수정하면 다른 정보를 가져올수 있다.
             brand = li.find('span', class_=BRAND_CLASS_NAME).get_text().strip()
             name = li.find('span', class_=NAME_CLASS_NAME).get_text().strip()
             price = li.find('span', class_=PRICE_CLASS_NAME).get_text().strip()
             imgLink = li.find('div', class_=IMG_CLASS_NAME).img['src']
             siteLink = li.a['href']
-            #print(DEBUG_PRINT.format(brand, name, price, imgLink, SITE + siteLink))
+            # 이미지링크가 //으로 되어있어 앞에 http 접두사와 //다음인 [2:] 슬라이싱 작업 실시
             products_list[siteLink] = Product(brand, name, price, 'https://' + imgLink[2:], SITE + siteLink)
     #
 
 def monitor():
-    # GET "view all" page
+    # 빌딩_db 메서드와 맞춰주여야한다 .
     SITE = 'https://www.mrporter.com/'
     BRAND_CLASS_NAME = 'pl-products-item__text pl-products-item__text--brand pl-products-item__text--upper'
     NAME_CLASS_NAME = 'pl-products-item__text pl-products-item__text--name'
     PRICE_CLASS_NAME = 'pl-products-item__text pl-products-item__text--price'
     IMG_CLASS_NAME = 'pl-products-item__img pl-products-item__spacing'
     # seperate page url formatting var
-    URL_FORMAT = 'https://www.mrporter.com/en-jp/mens/shoes?pn={}'
+    URL_FORMAT = 'https://www.mrporter.com/enjp/mens/shoes?pn={}'
 
     # =========
 
@@ -219,15 +225,18 @@ def monitor():
     bs4 = BeautifulSoup(r.text, "html.parser")
     lis = bs4.find_all('li', class_="pl-products-item")
     for li in lis:
+        # 위와 동일
         brand = li.find('span', class_=BRAND_CLASS_NAME).get_text().strip()
         name = li.find('span', class_=NAME_CLASS_NAME).get_text().strip()
         price = li.find('span', class_=PRICE_CLASS_NAME).get_text().strip()
         imgLink = li.find('div', class_=IMG_CLASS_NAME).img['src']
         siteLink = li.a['href']
-        # print(DEBUG_PRINT.format(brand, name, price, imgLink, SITE + siteLink))
         try:
+            #키의 존재유무를 보고
             products_list[siteLink]
         except:
+            # 없어서 에러가 날경우는 새상품이 추가된 경우니
+            # 알림 + DB에 insert를 한다 .
             log('s', "Added " + name + " to the database.")
             products_list[siteLink] = Product(brand, name, price, 'https://' + imgLink[2:], SITE + siteLink)
             send_embed('NEW',products_list[siteLink])
@@ -237,9 +246,10 @@ def monitor():
 ''' --------------------------------- RUN --------------------------------- '''
 if __name__ == "__main__":
     # Ignore insecure messages
+    # 웹훅때 이걸안하면 warning이 발생
     requests.packages.urllib3.disable_warnings()
 
-    # Load proxies (if available)
+    # 프록시를 읽어들인다.
     proxy_list = read_from_txt("proxies.txt")
     log('i', "Loaded " + str(len(proxy_list)) + " proxies.")
     if (len(proxy_list) == 0):
@@ -247,7 +257,7 @@ if __name__ == "__main__":
     else:
         use_proxies = True
 
-        # Initialize variables
+    # Initialize variables
     products_list = {}
     proxies = get_proxy(proxy_list)
 
