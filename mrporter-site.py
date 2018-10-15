@@ -1,9 +1,10 @@
 #-*-encoding:utf8:-*-
 ''' --------------------------------- INPUT YOUR CONFIG --------------------------------- '''
-MONITOR_DELAY = int(input(">>> Monitor Delay를 입력해주세요 (정수만) : ")) # second, if your input 10, monitor interval 10 second
-discord_webhook = input(">>> 웹훅 URL을 입력해주세요 : ")
-#MONITOR_DELAY = 5
-#discord_webhook = 'https://discordapp.com/api/webhooks/481411222118465550/8TanFM9unt2Ztf_ySUGlus9MNw9DVDaTKNXAQZpMYvtnoucHevzCYn0gjwV_ZpQmKsTQ'
+#MONITOR_DELAY = int(input(">>> Monitor Delay를 입력해주세요 (정수만) : ")) # second, if your input 10, monitor interval 10 second
+#discord_webhook = input(">>> 웹훅 URL을 입력해주세요 : ")
+MONITOR_DELAY = 5
+discord_webhook = 'https://discordapp.com/api/webhooks/481411222118465550/8TanFM9unt2Ztf_ySUGlus9MNw9DVDaTKNXAQZpMYvtnoucHevzCYn0gjwV_ZpQmKsTQ'
+KEYWORD_LIST = ['Jacques','Boots']
 ''' ------------------------------------------------------------------------------------- '''
 import requests
 from bs4 import BeautifulSoup
@@ -21,7 +22,11 @@ def send_embed(alert_type,product):
     url = discord_webhook
 
     # Create embed to send to webhook
-    embed = Webhook(url, color=123123)
+    # msg='@everyone' option making everyone msg method
+    if (alert_type == "KNEW"):
+        embed = Webhook(url, color=123123,msg='@everyone')
+    else:
+        embed = Webhook(url, color=123123)
 
     # Set author info
     embed.set_author(name='Mrporter', icon='https://previews.123rf.com/images/martialred/martialred1604/martialred160400080/55731598-%EB%A9%94%EC%8B%9C%EC%A7%80-%EC%95%B1%EA%B3%BC-%EC%9B%B9-%EC%82%AC%EC%9D%B4%ED%8A%B8%EC%97%90-%EB%8C%80%ED%95%9C-chatbot-%EC%B1%84%ED%8C%85-%EB%B4%87-%EB%98%90%EB%8A%94-%EC%B1%84%ED%84%B0-%EB%B4%87-%EB%9D%BC%EC%9D%B8-%EC%95%84%ED%8A%B8-%EC%95%84%EC%9D%B4%EC%BD%98.jpg')
@@ -31,16 +36,21 @@ def send_embed(alert_type,product):
         embed.set_desc("RESTOCK: " + "title")
     elif(alert_type == "NEW"):
         embed.set_desc("NEW: " + product.name)
+    elif (alert_type == "KNEW"):
+        embed.set_desc("NEW: " + product.name)
+
 
     embed.add_field(name="Product", value=product.name)
     embed.add_field(name="Brand", value=product.brand)
     embed.add_field(name="Price", value=product.price)
     embed.add_field(name="Link", value=product.siteLik)
-    embed.add_field(name="ImgLink", value=product.link)
+    #embed.add_field(name="ImgLink", value=product.link)
 
     # Set product image
-    #embed.set_thumbnail('https://cache.mrporter.com/images/products/1054353/1054353_mrp_fr_l.jpg')
-    #embed.set_image(product.link)
+    embed.set_thumbnail(product.link)
+    embed.set_image(product.link)
+    print(product.link)
+    input()
 
     # Set footer
     embed.set_footer(text='Mrporter by @DevHong', icon='https://static.zerochan.net/Daenerys.Targaryen.full.2190849.jpg', ts=True)
@@ -196,7 +206,7 @@ def monitor():
     PRICE_CLASS_NAME = 'pl-products-item__text pl-products-item__text--price'
     IMG_CLASS_NAME = 'pl-products-item__img pl-products-item__spacing'
     # seperate page url formatting var
-    URL_FORMAT = 'https://www.mrporter.com/enjp/mens/shoes?pn={}'
+    URL_FORMAT = 'https://www.mrporter.com/en-jp/mens/shoes?pn={}'
 
     # =========
 
@@ -231,15 +241,24 @@ def monitor():
         price = li.find('span', class_=PRICE_CLASS_NAME).get_text().strip()
         imgLink = li.find('div', class_=IMG_CLASS_NAME).img['src']
         siteLink = li.a['href']
+        alertType = "NEW"
+        for k in KEYWORD_LIST:
+            if k.lower().strip() in name.lower():
+                alertType = "KNEW"
+                break
+        print(KEYWORD_LIST)
+        print(name)
+        print(alertType)
         try:
             #키의 존재유무를 보고
             products_list[siteLink]
+            send_embed(alertType, products_list[siteLink])
         except:
             # 없어서 에러가 날경우는 새상품이 추가된 경우니
             # 알림 + DB에 insert를 한다 .
             log('s', "Added " + name + " to the database.")
             products_list[siteLink] = Product(brand, name, price, 'https://' + imgLink[2:], SITE + siteLink)
-            send_embed('NEW',products_list[siteLink])
+            send_embed(alertType,products_list[siteLink])
 
 
 
@@ -264,6 +283,7 @@ if __name__ == "__main__":
 
     # Build database
     build_db()
+
 
     # Monitor products
     while (True):
