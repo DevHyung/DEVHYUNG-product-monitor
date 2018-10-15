@@ -118,14 +118,9 @@ class Webhook:
 
 		return json.dumps(data, indent=4)
 
-
-
-
 	def post(self):
 		"""
 		Send the JSON formated object to the specified `self.url`.
 		"""
-
 		headers = {'Content-Type': 'application/json'}
-
 		result = requests.post(self.url, data=self.json, headers=headers, timeout=10, verify=False)
