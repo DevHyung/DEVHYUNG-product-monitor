@@ -76,10 +76,11 @@ def read_from_txt(path):
     # Raise an error if the file couldn't be found
     except:
         log('e', "Couldn't locate <" + path + ">.")
-        raise FileNotFound()
+        #raise FileNotFound()
 
     if (len(raw_lines) == 0):
-        raise NoDataLoaded()
+        pass
+        #raise NoDataLoaded()
 
     # Parse the data
     for line in raw_lines:
@@ -136,7 +137,7 @@ def send_embed(product):
     Sends a discord alert based on info provided.
     '''
 
-    url = 'INSERT YOUR WEBHOOK HERE'
+    url = 'https://discordapp.com/api/webhooks/481411222118465550/8TanFM9unt2Ztf_ySUGlus9MNw9DVDaTKNXAQZpMYvtnoucHevzCYn0gjwV_ZpQmKsTQ'
 
     embed = Webhook(url, color=123123)
 
@@ -190,7 +191,6 @@ def monitor(link, keywords):
             return
 
     page = soup(r.text, "html.parser")
-
     raw_links = page.findAll("a")
     hrefs = []
 
@@ -225,22 +225,7 @@ if (__name__ == "__main__"):
     keywords = [
         "bred-toe",
         "gold-toe",
-        "pharrell",
-        "free-throw-line",
-        "kendrick",
-        "tinker",
-        "game-royal",
-        "yeezy",
-        "human-race",
-        "big-bang",
-        "dont-trip",
-        "kung-fu-kenny",
-        "playstation",
-        "valentine",
-        "ovo-air-jordan",
-        "ovo-jordan",
-        "air-jordan-1",
-        "wotherspoon"
+        "Shoes"
     ]
 
     # Load sites from file
