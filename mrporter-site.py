@@ -1,11 +1,4 @@
 #-*-encoding:utf8:-*-
-''' --------------------------------- INPUT YOUR CONFIG --------------------------------- '''
-#MONITOR_DELAY = int(input(">>> Monitor Delay를 입력해주세요 (정수만) : ")) # second, if your input 10, monitor interval 10 second
-#discord_webhook = input(">>> 웹훅 URL을 입력해주세요 : ")
-MONITOR_DELAY = 5
-discord_webhook = 'https://discordapp.com/api/webhooks/481411222118465550/8TanFM9unt2Ztf_ySUGlus9MNw9DVDaTKNXAQZpMYvtnoucHevzCYn0gjwV_ZpQmKsTQ'
-KEYWORD_LIST = ['Jacques','Boots']
-''' ------------------------------------------------------------------------------------- '''
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -246,13 +239,9 @@ def monitor():
             if k.lower().strip() in name.lower():
                 alertType = "KNEW"
                 break
-        print(KEYWORD_LIST)
-        print(name)
-        print(alertType)
         try:
             #키의 존재유무를 보고
             products_list[siteLink]
-            send_embed(alertType, products_list[siteLink])
         except:
             # 없어서 에러가 날경우는 새상품이 추가된 경우니
             # 알림 + DB에 insert를 한다 .
@@ -267,6 +256,14 @@ if __name__ == "__main__":
     # Ignore insecure messages
     # 웹훅때 이걸안하면 warning이 발생
     requests.packages.urllib3.disable_warnings()
+    ''' --------------------------------- INPUT YOUR CONFIG --------------------------------- '''
+    MONITOR_DELAY = 5  # second, if your input 10, monitor interval 10 second
+    discord_webhook = 'https://discordapp.com/api/webhooks/481411222118465550/8TanFM9unt2Ztf_ySUGlus9MNw9DVDaTKNXAQZpMYvtnoucHevzCYn0gjwV_ZpQmKsTQ'
+    KEYWORD_LIST = [
+        'Jacques',
+        'Boots'
+    ]
+    ''' ------------------------------------------------------------------------------------- '''
 
     # 프록시를 읽어들인다.
     proxy_list = read_from_txt("proxies.txt")
